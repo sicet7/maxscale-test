@@ -1,0 +1,67 @@
+---
+
+-   name: Create Certificates
+    include_role:
+        name: create_certificate
+    vars:
+        create_certificate:
+            local_ca_key: "{{ playbook_dir }}/secrets/internal_ca.key"
+            local_ca_crt: "{{ playbook_dir }}/secrets/internal_ca.crt"
+            remote_ca_crt: "{{ playbook_dir }}/client/database_ca.crt"
+            remote_crt: "{{ playbook_dir }}/client/database_client.crt"
+            remote_key: "{{ playbook_dir }}/client/database_client.key"
+            key_size: "2048"
+            info:
+                common_name: "Client Cert"
+                country_name: "{{ cert_info.country_name }}"
+                organization_name: "{{ cert_info.organization_name }}"
+                organizational_unit_name: "{{ cert_info.organizational_unit_name }}"
+                locality_name: "{{ cert_info.locality_name }}"
+                state_or_province_name: "{{ cert_info.state_or_province_name }}"
+                email_address: "{{ cert_info.email_address }}"
+
+-   name: unset slave gtid position
+    community.mysql.mysql_variables:
+        ca_cert: "{{ playbook_dir }}/client/database_ca.crt"
+        client_cert: "{{ playbook_dir }}/client/database_client.crt"
+        client_key: "{{ playbook_dir }}/client/database_client.key"
+        check_hostname: no
+        login_user: root
+        login_password: "{{ item.value.root_password }}"
+        #        login_host: "{{ item.key }}"
+        login_host: "localhost"
+        login_port: "{{ item.value.port }}"
+        mode: global
+        variable: "gtid_slave_pos"
+        value: ""
+
+-   name: Change master
+    community.mysql.mysql_replication:
+        ca_cert: "{{ playbook_dir }}/client/database_ca.crt"
+        client_cert: "{{ playbook_dir }}/client/database_client.crt"
+        client_key: "{{ playbook_dir }}/client/database_client.key"
+        check_hostname: no
+        login_user: root
+        login_password: "{{ item.value.root_password }}"
+        #        login_host: "{{ item.key }}"
+        login_host: "localhost"
+        login_port: "{{ item.value.port }}"
+        mode: changeprimary
+        primary_host: "{{ master.key }}"
+        primary_port: "3306"
+        primary_user: "{{ monitor.username }}"
+        primary_password: "{{ monitor.password }}"
+        primary_use_gtid: current_pos
+
+-   name: start slave
+    community.mysql.mysql_query:
+        ca_cert: "{{ playbook_dir }}/client/database_ca.crt"
+        client_cert: "{{ playbook_dir }}/client/database_client.crt"
+        client_key: "{{ playbook_dir }}/client/database_client.key"
+        check_hostname: no
+        login_user: root
+        login_password: "{{ item.value.root_password }}"
+        #        login_host: "{{ item.key }}"
+        login_host: "localhost"
+        login_port: "{{ item.value.port }}"
+        query: "START SLAVE;"

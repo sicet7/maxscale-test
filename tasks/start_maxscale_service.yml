@@ -1,0 +1,53 @@
+---
+
+-   name: Create maxscale config
+    template:
+        src: "{{ playbook_dir }}/files/maxscale.cnf"
+        dest: "{{ playbook_dir }}/secrets/maxscale.cnf"
+
+-   name: Create Certificates
+    include_role:
+        name: create_certificate
+    vars:
+        create_certificate:
+            local_ca_key: "{{ playbook_dir }}/secrets/internal_ca.key"
+            local_ca_crt: "{{ playbook_dir }}/secrets/internal_ca.crt"
+            remote_ca_crt: "{{ playbook_dir }}/secrets/maxscale/database_ca.crt"
+            remote_crt: "{{ playbook_dir }}/secrets/maxscale/max_client.crt"
+            remote_key: "{{ playbook_dir }}/secrets/maxscale/max_client.key"
+            key_size: "2048"
+            info:
+                common_name: "maxscale"
+                country_name: "{{ cert_info.country_name }}"
+                organization_name: "{{ cert_info.organization_name }}"
+                organizational_unit_name: "{{ cert_info.organizational_unit_name }}"
+                locality_name: "{{ cert_info.locality_name }}"
+                state_or_province_name: "{{ cert_info.state_or_province_name }}"
+                email_address: "{{ cert_info.email_address }}"
+
+-   name: Create "database" docker network
+    community.docker.docker_network:
+        name: database
+
+-   name: Start Maxscale Docker Container
+    docker_container:
+        network_mode: "default"
+        image: mariadb/maxscale:latest
+        name: "maxscale"
+        state: started
+        restart_policy: unless-stopped
+        volumes:
+            - "{{ playbook_dir }}/secrets/maxscale/max_client.crt:/certs/max_client.crt"
+            - "{{ playbook_dir }}/secrets/maxscale/max_client.key:/certs/max_client.key"
+            - "{{ playbook_dir }}/secrets/maxscale/database_ca.crt:/certs/database_ca.crt"
+            - "{{ playbook_dir }}/secrets/maxscale.cnf:/etc/maxscale.cnf.d/my-maxscale.cnf"
+        ports:
+            - "3306:3306"
+            - "8989:8989"
+        networks:
+            -   name: database
+                aliases: "maxscale"
+        log_driver: json-file
+        log_options:
+            max-size: "30m"
+            max-file: "3"

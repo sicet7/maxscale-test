@@ -1,0 +1,30 @@
+---
+-   name: Check for internal root certificate key.
+    stat:
+        path: "{{ playbook_dir }}/secrets/internal_ca.key"
+    register: internal_ca_key_stat
+
+-   name: Generate missing internal root certificate key.
+    community.crypto.openssl_privatekey:
+        path: "{{ playbook_dir }}/secrets/internal_ca.key"
+        size: "4096"
+        type: RSA
+        force: yes
+    when: internal_ca_key_stat.stat.exists == false
+
+-   name: Remove old internal root certificate if new key.
+    file:
+        path: "{{ playbook_dir }}/secrets/internal_ca.crt"
+        state: absent
+    when: internal_ca_key_stat.stat.exists == false
+
+-   name: Check for internal root certificate.
+    stat:
+        path: "{{ playbook_dir }}/secrets/internal_ca.crt"
+    register: internal_ca_crt_stat
+
+-   name: Create internal root certificate.
+    community.crypto.x509_certificate:
+        path: "{{ playbook_dir }}/secrets/internal_ca.crt"
+        privatekey_path: "{{ playbook_dir }}/secrets/internal_ca.key"
+        provider: selfsigned

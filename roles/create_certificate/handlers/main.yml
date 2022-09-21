@@ -1,0 +1,6 @@
+---
+
+-   name: "Certificate Changes Detected"
+    debug:
+        msg: "Certificate Changes Detected"
+    listen: "create_certificate_change"

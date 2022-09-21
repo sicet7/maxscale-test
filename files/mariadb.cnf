@@ -1,0 +1,15 @@
+[mysqld]
+innodb_buffer_pool_size=2147483648
+innodb_autoextend_increment=128
+innodb_log_file_size=536870912
+innodb_log_buffer_size=67108864
+#ssl_ca=/certs/database_ca.crt
+#ssl_cert=/certs/database.crt
+#ssl_key=/certs/database.key
+#tls_version=TLSv1.2,TLSv1.3
+
+[mariadb]
+log_error=error_log
+log_bin=mariadb-bin
+log_slave_updates=1
+server_id={{ current_server.value.server_id }}

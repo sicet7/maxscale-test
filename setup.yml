@@ -1,0 +1,103 @@
+---
+-   hosts: 127.0.0.1
+    connection: local
+    gather_facts: no
+    become: no
+    any_errors_fatal: true
+    vars:
+        cert_info:
+            common_name: "sicet7.com"
+            country_name: "DK"
+            organization_name: "Sicet7"
+            organizational_unit_name: "Sicet7"
+            locality_name: "Fyn"
+            state_or_province_name: "Syddanmark"
+            email_address: "test@sicet7.com"
+        mariadb:
+            mariadb_server_1:
+                server_id: "1000"
+                data_dir: "{{ playbook_dir }}/data/mariadb_server_1"
+                cert_dir: "{{ playbook_dir }}/secrets/mariadb_server_1"
+                port: "3350"
+
+                # This password is for testing purposes only and should not be used in production.
+                root_password: "ePtSy2wF9uuSxP7KpbiLmNYP7iUvAPnm"
+
+            mariadb_server_2:
+                server_id: "2000"
+                data_dir: "{{ playbook_dir }}/data/mariadb_server_2"
+                cert_dir: "{{ playbook_dir }}/secrets/mariadb_server_2"
+                port: "3351"
+
+                # This password is for testing purposes only and should not be used in production.
+                root_password: "7fnmYeY5dgdqQk6JFEG8Eu3CLaWHeJSn"
+
+            mariadb_server_3:
+                server_id: "3000"
+                data_dir: "{{ playbook_dir }}/data/mariadb_server_3"
+                cert_dir: "{{ playbook_dir }}/secrets/mariadb_server_3"
+                port: "3352"
+
+                # This password is for testing purposes only and should not be used in production.
+                root_password: "chq8FCxkx4ZFMMy37qrWUdNqyBboj5te"
+
+            mariadb_server_4:
+                server_id: "4000"
+                data_dir: "{{ playbook_dir }}/data/mariadb_server_4"
+                cert_dir: "{{ playbook_dir }}/secrets/mariadb_server_4"
+                port: "3353"
+
+                # This password is for testing purposes only and should not be used in production.
+                root_password: "AX6gYk24GyCsxEsDrW9b2xvFZyDuyDqH"
+        maxscale:
+            username: "maxscale"
+            password: "tNR6wpvXp9fYtQnRpfppthjxiM4qMEkc"
+            host: "%"
+            priv: "mysql.user:SELECT/mysql.db:SELECT/mysql.tables_priv:SELECT/mysql.columns_priv:SELECT/mysql.procs_priv:SELECT/mysql.proxies_priv:SELECT/mysql.roles_mapping:SELECT/*.*:SHOW DATABASES,PROCESS,SUPER,RELOAD"
+        monitor:
+            username: "monitor_user"
+            password: "nEP7svcR9MDWbQr2qS77Rr9nyceRBm8d"
+            host: "%"
+            priv: "*.*:ALL"
+        users:
+            test_user:
+                password: "testing123"
+                host: "%"
+                priv: "*.*:ALL,GRANT"
+
+
+    tasks:
+
+        -   name: Set "master" server
+            set_fact:
+                master: "{{ (mariadb | dict2items).pop(0) }}"
+
+        -   name: Set "slaves" list
+            set_fact:
+                slaves: |
+                    {% set _ = server_list.pop(0) %}
+                    {{ server_list }}
+            vars:
+                server_list: "{{ mariadb | dict2items }}"
+
+        -   name: Set "servers" list
+            set_fact:
+                servers: "{{ mariadb.keys() | list }}"
+
+        -   include_tasks: ./tasks/root_certificate.yml
+
+        -   include_tasks: ./tasks/start_mariadb_database.yml
+            with_items: "{{ mariadb | dict2items }}"
+            loop_control:
+                loop_var: current_server
+
+        -   include_tasks: ./tasks/create_maxscale_user.yml
+
+        -   include_tasks: ./tasks/create_monitor_user.yml
+
+        -   include_tasks: ./tasks/create_normal_users.yml
+
+        -   include_tasks: ./tasks/setup_slaves.yml
+            with_items: "{{ slaves }}"
+
+        -   include_tasks: ./tasks/start_maxscale_service.yml

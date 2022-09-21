@@ -1,0 +1,438 @@
+---
+# Usage Example:
+#
+#-   name: Create Database Client Certificates
+#    include_role:
+#        name: create_certificate
+#    vars:
+#        create_certificate:
+#            local_ca_key: "{{ playbook_dir }}/requirements/database_ca.key"
+#            local_ca_crt: "{{ playbook_dir }}/requirements/database_ca.crt"
+#            remote_ca_crt: "/home/dmr_api/{{ application_env }}/certs/database_ca.crt"
+#            remote_crt: "/home/dmr_api/{{ application_env }}/certs/database_client.crt"
+#            remote_key: "/home/dmr_api/{{ application_env }}/certs/database_client.key"
+#            remote_pem: "/home/dmr_api/{{ application_env }}/certs/database_client.pem"
+#            key_size: "2048"
+#            info:
+#                common_name: "{{ inventory_hostname }}"
+#                country_name: "{{ secrets.certificate.country_name }}"
+#                organization_name: "{{ secrets.certificate.organization_name }}"
+#                organizational_unit_name: "{{ secrets.certificate.organizational_unit_name }}"
+#                locality_name: "{{ secrets.certificate.locality_name }}"
+#                state_or_province_name: "{{ secrets.certificate.state_or_province_name }}"
+#                email_address: "{{ secrets.certificate.email_address }}"
+
+-   name: Fail if "process_create_certificate" has value
+    fail:
+        msg: "Another process_create_certificate is running with values in the \"process_create_certificate\" variable"
+    when: (process_create_certificate | type_debug) == 'dict'
+
+-   name: Set "process_create_certificate" flag
+    set_fact:
+        process_create_certificate:
+            running: true
+            ansible_connection: "{{ ansible_connection }}"
+
+-   name: Fail if "create_certificate" is missing value
+    fail:
+        msg: "Missing value for \"create_certificate\""
+    when: create_certificate is not defined or (create_certificate | type_debug) != 'dict'
+
+-   name: Fail if "remote_key" value is missing
+    fail:
+        msg: "Missing \"remote_key\" key in \"create_certificate\""
+    when: create_certificate.remote_key is not defined
+
+-   name: Fail if "remote_crt" value is missing
+    fail:
+        msg: "Missing \"remote_crt\" key in \"create_certificate\""
+    when: create_certificate.remote_crt is not defined
+
+-   name: Fail if "remote_ca_crt" value is missing
+    fail:
+        msg: "Missing \"remote_ca_crt\" key in \"create_certificate\""
+    when: create_certificate.remote_ca_crt is not defined
+
+-   name: Fail if "key_size" value is missing
+    fail:
+        msg: "Missing \"key_size\" key in \"create_certificate\""
+    when: create_certificate.key_size is not defined
+
+-   name: Fail if "local_ca_crt" value is missing
+    fail:
+        msg: "Missing \"local_ca_crt\" key in \"create_certificate\""
+    when: create_certificate.local_ca_crt is not defined
+
+-   name: Fail if "local_ca_key" value is missing
+    fail:
+        msg: "Missing \"local_ca_key\" key in \"create_certificate\""
+    when: create_certificate.local_ca_key is not defined
+
+-   name: Fail if "info.common_name" value is missing
+    fail:
+        msg: "Missing \"info.common_name\" key in \"create_certificate\""
+    when: create_certificate.info.common_name is not defined
+
+-   name: Fail if "info.country_name" value is missing
+    fail:
+        msg: "Missing \"info.country_name\" key in \"create_certificate\""
+    when: create_certificate.info.country_name is not defined
+
+-   name: Fail if "info.organization_name" value is missing
+    fail:
+        msg: "Missing \"info.organization_name\" key in \"create_certificate\""
+    when: create_certificate.info.organization_name is not defined
+
+-   name: Fail if "info.organization_name" value is missing
+    fail:
+        msg: "Missing \"info.organization_name\" key in \"create_certificate\""
+    when: create_certificate.info.organization_name is not defined
+
+-   name: Fail if "info.organizational_unit_name" value is missing
+    fail:
+        msg: "Missing \"info.organizational_unit_name\" key in \"create_certificate\""
+    when: create_certificate.info.organizational_unit_name is not defined
+
+-   name: Fail if "info.locality_name" value is missing
+    fail:
+        msg: "Missing \"info.locality_name\" key in \"create_certificate\""
+    when: create_certificate.info.locality_name is not defined
+
+-   name: Fail if "info.state_or_province_name" value is missing
+    fail:
+        msg: "Missing \"info.state_or_province_name\" key in \"create_certificate\""
+    when: create_certificate.info.state_or_province_name is not defined
+
+-   name: Fail if "info.email_address" value is missing
+    fail:
+        msg: "Missing \"info.email_address\" key in \"create_certificate\""
+    when: create_certificate.info.email_address is not defined
+
+-   name: "Directory \"{{ create_certificate.remote_key | dirname }}\""
+    file:
+        path: "{{ create_certificate.remote_key | dirname }}"
+        state: directory
+
+-   name: "Directory \"{{ create_certificate.remote_ca_crt | dirname }}\""
+    file:
+        path: "{{ create_certificate.remote_ca_crt | dirname }}"
+        state: directory
+
+-   name: "Directory \"{{ create_certificate.remote_crt | dirname }}\""
+    file:
+        path: "{{ create_certificate.remote_crt | dirname }}"
+        state: directory
+
+-   name: "Directory \"{{ create_certificate.remote_pem | dirname }}\""
+    file:
+        path: "{{ create_certificate.remote_pem | dirname }}"
+        state: directory
+    when: create_certificate.remote_pem is defined
+
+-   name: "Directory \"{{ create_certificate.remote_dhparam | dirname }}\""
+    file:
+        path: "{{ create_certificate.remote_dhparam | dirname }}"
+        state: directory
+    when: create_certificate.remote_dhparam is defined
+
+-   name: Unset "remote_key_stat"
+    set_fact:
+        remote_key_stat:
+
+-   name: "Stat \"{{ create_certificate.remote_key }}\""
+    stat:
+        path: "{{ create_certificate.remote_key }}"
+    register: remote_key_stat
+
+-   name: Add Stat to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'remote_key_stat': remote_key_stat}, recursive=True) }}"
+
+-   name: Unset "remote_key_stat"
+    set_fact:
+        remote_key_stat:
+
+-   name: Unset "remote_crt_stat"
+    set_fact:
+        remote_crt_stat:
+
+-   name: "Stat \"{{ create_certificate.remote_crt }}\""
+    stat:
+        path: "{{ create_certificate.remote_crt }}"
+    register: remote_crt_stat
+
+-   name: Add Stat to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'remote_crt_stat': remote_crt_stat}, recursive=True) }}"
+
+-   name: Unset "remote_crt_stat"
+    set_fact:
+        remote_crt_stat:
+
+-   name: Unset "local_ca_crt_stat"
+    set_fact:
+        local_ca_crt_stat:
+
+-   name: "Stat \"{{ create_certificate.local_ca_crt }}\""
+    delegate_to: localhost
+    become: no
+    stat:
+        path: "{{ create_certificate.local_ca_crt }}"
+    register: local_ca_crt_stat
+
+-   name: Add Stat to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'local_ca_crt_stat': local_ca_crt_stat}, recursive=True) }}"
+
+-   name: Unset "local_ca_crt_stat"
+    set_fact:
+        local_ca_crt_stat:
+
+-   name: Unset "local_ca_key_stat"
+    set_fact:
+        local_ca_key_stat:
+
+-   name: "Stat \"{{ create_certificate.local_ca_key }}\""
+    delegate_to: localhost
+    become: no
+    stat:
+        path: "{{ create_certificate.local_ca_key }}"
+    register: local_ca_key_stat
+
+-   name: Add Stat to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'local_ca_key_stat': local_ca_key_stat}, recursive=True) }}"
+
+-   name: Unset "local_ca_key_stat"
+    set_fact:
+        local_ca_key_stat:
+
+-   name: Fail if "local_ca_key" file is not found
+    fail:
+        msg: "Failed to find local_ca_key: {{ create_certificate.local_ca_key }}"
+    when: process_create_certificate.local_ca_key_stat.stat.exists == false
+
+-   name: Fail if "local_ca_crt_stat" file is not found
+    fail:
+        msg: "Failed to find local_ca_crt: {{ create_certificate.local_ca_crt }}"
+    when: process_create_certificate.local_ca_crt_stat.stat.exists == false
+
+-   name: Unset "remote_dhparam_stat"
+    set_fact:
+        remote_dhparam_stat:
+    when: create_certificate.remote_dhparam is defined
+
+-   name: "Stat \"{{ create_certificate.remote_dhparam }}\""
+    stat:
+        path: "{{ create_certificate.remote_dhparam }}"
+    register: remote_dhparam_stat
+    when: create_certificate.remote_dhparam is defined
+
+-   name: Add Stat to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'remote_dhparam_stat': remote_dhparam_stat}, recursive=True) }}"
+    when: create_certificate.remote_dhparam is defined
+
+-   name: Unset "remote_dhparam_stat"
+    set_fact:
+        remote_dhparam_stat:
+    when: create_certificate.remote_dhparam is defined
+
+-   name: "Upload CA to \"{{ create_certificate.remote_ca_crt }}\"."
+    copy:
+        dest: "{{ create_certificate.remote_ca_crt }}"
+        src: "{{ create_certificate.local_ca_crt }}"
+    notify:
+        - "create_certificate_change"
+
+-   name: "Generate \"{{ create_certificate.remote_key }}\""
+    community.crypto.openssl_privatekey:
+        path: "{{ create_certificate.remote_key }}"
+        size: "{{ create_certificate.key_size }}"
+        type: RSA
+        force: yes
+    notify:
+        - "create_certificate_change"
+    when: process_create_certificate.remote_key_stat.stat.exists == false
+
+-   name: "Remove \"{{ create_certificate.remote_crt }}\" if key was regenerated"
+    file:
+        path: "{{ create_certificate.remote_crt }}"
+        state: absent
+    when: process_create_certificate.remote_key_stat.stat.exists == false
+
+-   name: "Remove \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    file:
+        path: "{{ create_certificate.remote_crt | dirname }}/tmp.csr"
+        state: absent
+
+-   name: "Generate \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    community.crypto.openssl_csr:
+        path: "{{ create_certificate.remote_crt | dirname }}/tmp.csr"
+        privatekey_path: "{{ create_certificate.remote_key }}"
+        force: yes
+        common_name: "{{ create_certificate.info.common_name }}"
+        country_name: "{{ create_certificate.info.country_name }}"
+        organization_name: "{{ create_certificate.info.organization_name }}"
+        organizational_unit_name: "{{ create_certificate.info.organizational_unit_name }}"
+        locality_name: "{{ create_certificate.info.locality_name }}"
+        state_or_province_name: "{{ create_certificate.info.state_or_province_name }}"
+        email_address: "{{ create_certificate.info.email_address }}"
+    notify:
+        - "create_certificate_change"
+    when: process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false
+
+-   name: Remove tmp directory.
+    delegate_to: localhost
+    file:
+        path: "{{ playbook_dir }}/tmp"
+        state: absent
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection != 'local'
+
+-   name: Remove tmp directory.
+    file:
+        path: "{{ playbook_dir }}/tmp"
+        state: absent
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection == 'local'
+
+-   name: Create tmp directory.
+    delegate_to: localhost
+    file:
+        path: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}"
+        state: directory
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection != 'local'
+
+-   name: Create tmp directory.
+    file:
+        path: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}"
+        state: directory
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection == 'local'
+
+-   name: "Download \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    fetch:
+        flat: yes
+        dest: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/tmp.csr"
+        src: "{{ create_certificate.remote_crt | dirname }}/tmp.csr"
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection != 'local'
+
+-   name: "Copy \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    copy:
+        dest: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/tmp.csr"
+        src: "{{ create_certificate.remote_crt | dirname }}/tmp.csr"
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection == 'local'
+
+-   name: "Sign downloaded \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    delegate_to: localhost
+    community.crypto.x509_certificate:
+        path: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/{{ create_certificate.remote_crt | basename }}"
+        csr_path: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/tmp.csr"
+        ownca_path: "{{ create_certificate.local_ca_crt }}"
+        ownca_privatekey_path: "{{ create_certificate.local_ca_key }}"
+        provider: ownca
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection != 'local'
+
+-   name: "Sign downloaded \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    community.crypto.x509_certificate:
+        path: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/{{ create_certificate.remote_crt | basename }}"
+        csr_path: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/tmp.csr"
+        ownca_path: "{{ create_certificate.local_ca_crt }}"
+        ownca_privatekey_path: "{{ create_certificate.local_ca_key }}"
+        provider: ownca
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection == 'local'
+
+-   name: "Upload signed CRT to \"{{ create_certificate.remote_crt }}\"."
+    copy:
+        dest: "{{ create_certificate.remote_crt }}"
+        src: "{{ playbook_dir }}/tmp/{{ inventory_hostname }}/{{ create_certificate.remote_crt | basename }}"
+    notify:
+        - "create_certificate_change"
+    when: process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false
+
+-   name: "Remove \"{{ create_certificate.remote_crt | dirname }}/tmp.csr\""
+    file:
+        path: "{{ create_certificate.remote_crt | dirname }}/tmp.csr"
+        state: absent
+
+-   name: Remove tmp directory.
+    delegate_to: localhost
+    file:
+        path: "{{ playbook_dir }}/tmp"
+        state: absent
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection != 'local'
+
+-   name: Remove tmp directory.
+    file:
+        path: "{{ playbook_dir }}/tmp"
+        state: absent
+    become: no
+    when: (process_create_certificate.remote_key_stat.stat.exists == false or process_create_certificate.remote_crt_stat.stat.exists == false) and process_create_certificate.ansible_connection == 'local'
+
+-   name: Unset "remote_crt_slurp"
+    set_fact:
+        remote_crt_slurp:
+    when: create_certificate.remote_pem is defined
+
+-   name: "Read \"{{ create_certificate.remote_crt }}\" file."
+    ansible.builtin.slurp:
+        src: "{{ create_certificate.remote_crt }}"
+    register: remote_crt_slurp
+    when: create_certificate.remote_pem is defined
+
+-   name: Add Slurp to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'remote_crt_slurp': remote_crt_slurp}, recursive=True) }}"
+    when: create_certificate.remote_pem is defined
+
+-   name: Unset "remote_crt_slurp"
+    set_fact:
+        remote_crt_slurp:
+    when: create_certificate.remote_pem is defined
+
+-   name: Unset "remote_key_slurp"
+    set_fact:
+        remote_key_slurp:
+    when: create_certificate.remote_pem is defined
+
+-   name: "Read \"{{ create_certificate.remote_key }}\" file."
+    ansible.builtin.slurp:
+        src: "{{ create_certificate.remote_key }}"
+    register: remote_key_slurp
+    when: create_certificate.remote_pem is defined
+
+-   name: Add Slurp to object
+    set_fact:
+        process_create_certificate: "{{ process_create_certificate | default({}) | combine({'remote_key_slurp': remote_key_slurp}, recursive=True) }}"
+    when: create_certificate.remote_pem is defined
+
+-   name: Unset "remote_key_slurp"
+    set_fact:
+        remote_key_slurp:
+    when: create_certificate.remote_pem is defined
+
+-   name: "Make \"{{ create_certificate.remote_pem | default('PEM') }}\" file."
+    copy:
+        dest: "{{ create_certificate.remote_pem }}"
+        content: "{{ process_create_certificate.remote_crt_slurp.content | b64decode | trim + '\n' + process_create_certificate.remote_key_slurp.content | b64decode | trim }}"
+    notify:
+        - "create_certificate_change"
+    when: create_certificate.remote_pem is defined
+
+-   name: "Generate \"{{ create_certificate.remote_dhparam | default('DH Param') }}\" file."
+    community.crypto.openssl_dhparam:
+        path: "{{ create_certificate.remote_dhparam }}"
+        force: yes
+        size: "{{ create_certificate.remote_dhparam_size | default('4096') }}"
+    notify:
+        - "create_certificate_change"
+    when: create_certificate.remote_dhparam is defined and process_create_certificate.remote_dhparam_stat.stat.exists == false
+
+-   name: Unset "process_create_certificate"
+    set_fact:
+        process_create_certificate:

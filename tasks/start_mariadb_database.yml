@@ -1,0 +1,61 @@
+---
+
+-   name: Create Certificates
+    include_role:
+        name: create_certificate
+    vars:
+        create_certificate:
+            local_ca_key: "{{ playbook_dir }}/secrets/internal_ca.key"
+            local_ca_crt: "{{ playbook_dir }}/secrets/internal_ca.crt"
+            remote_ca_crt: "{{ current_server.value.cert_dir }}/database_ca.crt"
+            remote_crt: "{{ current_server.value.cert_dir }}/database_client.crt"
+            remote_key: "{{ current_server.value.cert_dir }}/database_client.key"
+            key_size: "2048"
+            info:
+                common_name: "{{ current_server.key }}"
+                country_name: "{{ cert_info.country_name }}"
+                organization_name: "{{ cert_info.organization_name }}"
+                organizational_unit_name: "{{ cert_info.organizational_unit_name }}"
+                locality_name: "{{ cert_info.locality_name }}"
+                state_or_province_name: "{{ cert_info.state_or_province_name }}"
+                email_address: "{{ cert_info.email_address }}"
+
+-   name: Create "database" docker network
+    community.docker.docker_network:
+        name: database
+
+-   name: "Create \"{{ current_server.value.data_dir }}\" directory"
+    file:
+        path: "{{ current_server.value.data_dir }}"
+        state: directory
+
+-   name: Create mariadb config
+    template:
+        src: "{{ playbook_dir }}/files/mariadb.cnf"
+        dest: "{{ playbook_dir }}/secrets/{{ current_server.key }}/mariadb.cnf"
+
+-   name: Start MariaDB Docker Container
+    docker_container:
+        network_mode: "default"
+        image: mariadb:10.9-jammy
+        name: "{{ current_server.key }}"
+        state: started
+        restart_policy: unless-stopped
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - "{{ current_server.value.cert_dir }}/database_client.crt:/certs/database.crt"
+            - "{{ current_server.value.cert_dir }}/database_client.key:/certs/database.key"
+            - "{{ current_server.value.cert_dir }}/database_ca.crt:/certs/database_ca.crt"
+            - "{{ playbook_dir }}/secrets/{{ current_server.key }}/mariadb.cnf:/etc/mysql/mariadb.conf.d/50-asg-custom.cnf:ro"
+            - "{{ current_server.value.data_dir }}:/var/lib/mysql"
+        ports:
+            - "{{ current_server.value.port }}:3306"
+        networks:
+            -   name: database
+                aliases: "{{ current_server.key }}"
+        log_driver: json-file
+        log_options:
+            max-size: "30m"
+            max-file: "3"
+        env:
+            MARIADB_ROOT_PASSWORD: "{{ current_server.value.root_password }}"

@@ -1,0 +1,38 @@
+{% for item in servers %}
+[{{ item }}]
+type=server
+address={{ item }}
+port=3306
+protocol=MariaDBBackend
+#ssl=true
+#ssl_cert=/certs/max_client.crt
+#ssl_key=/certs/max_client.key
+#ssl_ca_cert=/certs/database_ca.crt
+
+{% endfor %}
+
+[Replication-Monitor]
+type=monitor
+module=mariadbmon
+servers={{ servers|join(', ') }}
+user={{ monitor.username }}
+replication_user={{ monitor.username }}
+password={{ monitor.password }}
+replication_password={{ monitor.password }}
+monitor_interval=1000ms
+auto_failover=true
+auto_rejoin=true
+
+[Main-Service]
+type=service
+router=readconnroute
+router_options=master
+servers={{ servers|join(', ') }}
+user={{ maxscale.username }}
+password={{ maxscale.password }}
+
+[Main-Listener]
+type=listener
+service=Main-Service
+protocol=MariaDBClient
+port=3306
